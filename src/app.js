@@ -2,11 +2,14 @@ import express from "express";
 import bodyParser from "body-parser";
 import morgan from "morgan";
 import { createServer } from "http";
-import 'dotenv/config'
+import "dotenv/config";
 import { setupSockets } from "./sockets/index.js";
-import users from './routes/user.routes.js'
+import cookieParser from "cookie-parser";
+
+import users from "./routes/user.routes.js";
+import room from "./routes/rooms.routes.js";
 import errorHandler from "./middleware/errorHandler.js";
-import cookieParser from 'cookie-parser';
+
 const app = express();
 const server = createServer(app);
 
@@ -29,20 +32,23 @@ app.use((req, res, next) => {
   );
   next();
 });
-app.use(users)
+app.use("/api", users);
+app.use("/api", room);
+app.use(errorHandler)
+
 // Manejador de errores para promesas no manejadas
 process.on("unhandledRejection", (err) => {
-  console.error("UNHANDLED REJECTION! 💥 Shutting down...")
-  console.error(err.name, err.message)
-  process.exit(1)
-})
+  console.error("UNHANDLED REJECTION! 💥 Shutting down...");
+  console.error(err.name, err.message);
+  process.exit(1);
+});
+
 
 // Manejador de errores para excepciones no capturadas
 process.on("uncaughtException", (err) => {
-  console.error("UNCAUGHT EXCEPTION! 💥 Shutting down...")
-  console.error(err.name, err.message)
-  process.exit(1)
-})
+  console.error("UNCAUGHT EXCEPTION! 💥 Shutting down...");
+  console.error(err.name, err.message);
+  process.exit(1);
+});
 
-
-export default server
+export default server;
