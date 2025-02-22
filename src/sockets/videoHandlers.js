@@ -1,6 +1,5 @@
 export function setupVideoHandlers(socket, io) {
     socket.on("changeVideo", (url) => {
-      console.log(url);
       socket.broadcast.emit("changeVideo", url);
     });
   
@@ -24,3 +23,5 @@ export function setupVideoHandlers(socket, io) {
       socket.broadcast.emit("updateProgress", progress);
     });
   }
+
+  
