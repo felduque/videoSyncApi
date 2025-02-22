@@ -1,9 +1,8 @@
-import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import supabase from "../../database/database.js";
 import { userExists, createAuthenticationTokens } from "./utils.js";
 import AppError from "../../utils/AppError.js";
-
+import jwt from "jsonwebtoken";
 const register = async (req, res, next) => {
   const { username, email, password } = req.body;
   try {
@@ -77,4 +76,64 @@ const login = async (req, res, next) => {
   }
 };
 
-export { register, login };
+const refreshAccessToken = async (req, res, next) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+    
+    if (!refreshToken) {
+      return next(new AppError('Refresh token required', 401));
+    }
+
+    // Verificar si el refresh token existe y es válido en la base de datos
+    const { data: tokenData, error: tokenError } = await supabase
+      .from('refresh_tokens')
+      .select('*')
+      .eq('token', refreshToken)
+      .eq('is_revoked', false)
+      .single();
+
+    if (tokenError || !tokenData) {
+      res.clearCookie('refreshToken');
+      return next(new AppError('Invalid refresh token', 401));
+    }
+
+    // Verificar si el token ha expirado
+    if (new Date(tokenData.expires_at) < new Date()) {
+      // Marcar el token como revocado
+      await supabase
+        .from('refresh_tokens')
+        .update({ is_revoked: true })
+        .eq('token', refreshToken);
+
+      res.clearCookie('refreshToken');
+      return next(new AppError('Refresh token expired', 401));
+    }
+
+    // Obtener datos del usuario
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, username, email, avatar_url')
+      .eq('id', tokenData.user_id)
+      .single();
+
+    if (userError) {
+      return next(new AppError('User not found', 404));
+    }
+
+    // Generar nuevo access token
+    const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+      expiresIn: '15m',
+    });
+
+    res.json({
+      status: 'success',
+      data: {
+        tkAccess: accessToken,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { register, login, refreshAccessToken };
