@@ -15,7 +15,7 @@ export function setupSockets(server) {
   io.on("connection", (socket) => {
     console.log("New client connected");
 
-    const userId = setupUserHandlers(socket, io);
+    setupUserHandlers(socket, io);
     setupVideoHandlers(socket, io);
 
     socket.on("disconnect", () => {
